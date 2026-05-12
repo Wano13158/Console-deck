@@ -2,12 +2,10 @@ import pygame
 import os
 import io
 import tkinter as tk
-
-import tempfile
-import subprocess
-import hashlib
 from tkinter import simpledialog, filedialog
 import webbrowser
+import tempfile
+import subprocess
 from urllib.parse import urlparse
 from urllib.request import urlopen
 from logic import esegui_azione, PORTA_ARDUINO
@@ -49,46 +47,49 @@ icon_cache = {}
 
 
 
-def _extract_icon_from_exe(exe_path):
+def _extract_exe_icon_surface(exe_path):
     if os.name != "nt" or not os.path.isfile(exe_path):
         return None
 
-    cache_dir = os.path.join(tempfile.gettempdir(), "consoledeck_icon_cache")
-    os.makedirs(cache_dir, exist_ok=True)
-    digest = hashlib.sha1(exe_path.encode("utf-8", errors="ignore")).hexdigest()[:16]
-    ico_path = os.path.join(cache_dir, f"{digest}.ico")
+    ps_script = (
+        "Add-Type -AssemblyName System.Drawing; "
+        "$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($args[0]); "
+        "if ($icon -eq $null) { exit 1 }; "
+        "$bmp = $icon.ToBitmap(); "
+        "$bmp.Save($args[1], [System.Drawing.Imaging.ImageFormat]::Png)"
+    )
 
-    if not os.path.isfile(ico_path):
-        ps_script = (
-            "$exe = [System.IO.Path]::GetFullPath($args[0]); "
-            "$out = [System.IO.Path]::GetFullPath($args[1]); "
-            "Add-Type -AssemblyName System.Drawing; "
-            "$icon = [System.Drawing.Icon]::ExtractAssociatedIcon($exe); "
-            "if ($icon -ne $null) { "
-            "$fs = [System.IO.File]::Open($out, [System.IO.FileMode]::Create); "
-            "$icon.Save($fs); $fs.Close(); $icon.Dispose() }"
-        )
-        try:
-            subprocess.run([
+    with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
+        png_path = tmp.name
+
+    try:
+        completed = subprocess.run(
+            [
                 "powershell",
                 "-NoProfile",
-                "-ExecutionPolicy", "Bypass",
                 "-Command",
                 ps_script,
                 exe_path,
-                ico_path,
-            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=3)
-        except Exception:
+                png_path,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=3,
+        )
+        if completed.returncode != 0 or not os.path.isfile(png_path):
             return None
 
-    if not os.path.isfile(ico_path):
-        return None
-
-    try:
-        loaded = pygame.image.load(ico_path)
+        loaded = pygame.image.load(png_path)
         return pygame.transform.smoothscale(loaded, (24, 24))
     except Exception:
         return None
+    finally:
+        try:
+            os.remove(png_path)
+        except OSError:
+            pass
+
+
 def _build_exe_fallback_icon():
     icon = pygame.Surface((24, 24), pygame.SRCALPHA)
     pygame.draw.rect(icon, (82, 138, 255), (0, 0, 24, 24), border_radius=5)
@@ -117,7 +118,7 @@ def _load_icon_for_button(cfg):
         except Exception:
             icon_surface = None
     elif action_type == "exe" and value:
-        icon_surface = _extract_icon_from_exe(value)
+        icon_surface = _extract_exe_icon_surface(value)
         if icon_surface is None:
             ico_candidate = os.path.splitext(value)[0] + ".ico"
             if os.path.isfile(ico_candidate):
