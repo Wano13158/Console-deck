@@ -1,3 +1,4 @@
+import os
 # -*- mode: python ; coding: utf-8 -*-
 
 
@@ -15,6 +16,8 @@ a = Analysis(
     optimize=0,
 )
 pyz = PYZ(a.pure)
+
+icon_path = 'app.ico' if os.path.exists('app.ico') else None
 
 exe = EXE(
     pyz,
@@ -35,4 +38,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=icon_path,
 )
