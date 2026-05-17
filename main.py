@@ -134,9 +134,12 @@ def main(gui_mode):
 
                             root = tk.Tk()
                             root.withdraw()  # Приховує головне вікно
+                            file_types = [("All files", "*")]
+                            if os.name == "nt":
+                                file_types.insert(0, ("Executable files", "*.exe"))
                             path = filedialog.askopenfilename(
-                                title="Select Executable",
-                                filetypes=[("Executable files", "*.exe")],
+                                title="Select executable",
+                                filetypes=file_types,
                                 initialdir=os.path.expanduser("~")
                             )
                             if path:

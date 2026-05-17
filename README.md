@@ -7,7 +7,7 @@ Ideal for creating your own customizable macro deck or personal launcher.
 
 ## ✅ Requirements
 
-- A Windows PC
+- Windows or Linux PC
 - Python 3.11 or higher
 - Internet connection (only for the initial setup)
 
@@ -32,6 +32,11 @@ Ideal for creating your own customizable macro deck or personal launcher.
 pip install pygame pyperclip pyserial
 ```
 
+Linux only (for keyboard macros):
+```bash
+sudo apt install xdotool
+```
+
 If you get an error like `'pip' is not recognized`, try restarting your PC.
 
 ---
@@ -45,6 +50,8 @@ If you get an error like `'pip' is not recognized`, try restarting your PC.
 ```bash
 python main.py --gui
 ```
+
+On Linux, executable actions expect a runnable file (binary/script with execute permissions).
 
 If everything is set up correctly, a graphical window will open.
 

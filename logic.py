@@ -58,6 +58,25 @@ last_volume_value = 0
 volume_step_accumulator = 0
 is_muted = False
 last_exe_launch_time = 0.0
+IS_WINDOWS = os.name == "nt"
+
+
+LINUX_KEY_MAP = {
+    "CTRL": "ctrl", "CONTROL": "ctrl",
+    "SHIFT": "shift",
+    "ALT": "alt",
+    "WIN": "super", "WINDOWS": "super",
+    "TAB": "Tab", "SPACE": "space", "ENTER": "Return", "ESC": "Escape",
+    "UP": "Up", "DOWN": "Down", "LEFT": "Left", "RIGHT": "Right",
+    "HOME": "Home", "END": "End", "PGUP": "Page_Up", "PGDN": "Page_Down",
+    "DELETE": "Delete", "DEL": "Delete", "BACKSPACE": "BackSpace"
+}
+for i in range(1, 13):
+    LINUX_KEY_MAP[f"F{i}"] = f"F{i}"
+for i in range(10):
+    LINUX_KEY_MAP[str(i)] = str(i)
+for i in range(26):
+    LINUX_KEY_MAP[chr(65 + i)] = chr(97 + i)
 
 
 def default_config():
@@ -167,11 +186,27 @@ def esegui_macro(macro_value):
         print(f"[ERROR] {e}")
         return
 
-    KEYEVENTF_KEYUP = 0x0002
-    for vk_code in vk_codes:
-        ctypes.windll.user32.keybd_event(vk_code, 0, 0, 0)
-    for vk_code in reversed(vk_codes):
-        ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_KEYUP, 0)
+    if IS_WINDOWS:
+        KEYEVENTF_KEYUP = 0x0002
+        for vk_code in vk_codes:
+            ctypes.windll.user32.keybd_event(vk_code, 0, 0, 0)
+        for vk_code in reversed(vk_codes):
+            ctypes.windll.user32.keybd_event(vk_code, 0, KEYEVENTF_KEYUP, 0)
+        return
+
+    keys = []
+    for part in [part.strip().upper() for part in str(macro_value).split("+") if part.strip()]:
+        key = LINUX_KEY_MAP.get(part)
+        if not key:
+            print(f"[ERROR] Unsupported Linux macro key: {part}")
+            return
+        keys.append(key)
+    try:
+        subprocess.run(["xdotool", "key", "+".join(keys)], check=True, capture_output=True)
+    except FileNotFoundError:
+        print("[ERROR] xdotool is required on Linux for macro execution")
+    except subprocess.CalledProcessError as e:
+        print(f"[ERROR] Linux macro execution failed: {e}")
 
 def esegui_azione(azione):
     global last_exe_launch_time
@@ -184,7 +219,10 @@ def esegui_azione(azione):
             print("[DEBUG] EXE launch blocked: wait 2 seconds between launches")
             return
         try:
-            subprocess.Popen(azione["value"])
+            if IS_WINDOWS:
+                subprocess.Popen(azione["value"])
+            else:
+                subprocess.Popen([azione["value"]])
             last_exe_launch_time = now
             write_log(f"Launched executable: {azione['value']}")
         except Exception as e:
@@ -218,6 +256,8 @@ def ascolta_seriale(config):
         ascolta_seriale(config)
 
 def simulate_keypress(vk_code):
+    if not IS_WINDOWS:
+        return
     ctypes.windll.user32.keybd_event(vk_code, 0, 0x0001, 0)
     ctypes.windll.user32.keybd_event(vk_code, 0, 0x0001 | 0x0002, 0)
 
