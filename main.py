@@ -70,6 +70,7 @@ def main(gui_mode):
                     gui.SCREEN_WIDTH = new_width
                     gui.SCREEN_HEIGHT = new_height
                     gui.SCREEN = pygame.display.set_mode((new_width, new_height), pygame.RESIZABLE)
+                    gui.update_responsive_metrics(new_width, new_height)
 
                 elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                     mx, my = pygame.mouse.get_pos()
